@@ -26,7 +26,9 @@ def make_soft_mask(
     signed_dist = dist_in - dist_out
 
     # normalize around boundary
-    soft = np.clip(signed_dist / edge_width, 0.0, 1.0)
+    # Old: soft = np.clip(signed_dist / edge_width, 0.0, 1.0) -> eroded inward
+    # New: 1.0 + (dist/edge) -> 1.0 at boundary, fades out as we go outside
+    soft = np.clip(1.0 + (signed_dist / edge_width), 0.0, 1.0)
 
     if smoothstep:
         # smoothstep: 3t^2 - 2t^3
