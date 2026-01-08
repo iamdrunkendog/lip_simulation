@@ -25,7 +25,7 @@ PRESET_KEYS = [
     "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS",
 
     # Color
-    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE",
+    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE", "BASE_DESATURATION",
 
     # Fake Normal
     "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN",
@@ -195,6 +195,13 @@ with st.sidebar.expander("Color", expanded=True):
         help="'normal'은 색을 덮어씌우고, 'softlight'는 원본 질감을 살리며 자연스럽게 색을 입힙니다."
     )
 
+    BASE_DESATURATION = st.slider(
+        "Base Desat", 0.0, 1.0,
+        st.session_state.get("BASE_DESATURATION", 0.0),
+        key="BASE_DESATURATION",
+        help="색을 입히기 전 원래 입술의 붉은 기를 중립화(무채색화)합니다. 블루, 퍼플 등의 특수 컬러 발색을 도웁니다."
+    )
+
 
 # ------------------
 # Mask / Geometry
@@ -345,6 +352,7 @@ params = {
     },
     
     "BLENDING_MODE": BLENDING_MODE,
+    "BASE_DESATURATION": BASE_DESATURATION,
     
 }
 

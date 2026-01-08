@@ -79,7 +79,8 @@ def render_lips(image_path, params):
         g=color_params.get("G", 0),
         b=color_params.get("B", 0),
         opacity=color_params.get("OPACITY", 0.8),
-        mode=params.get("BLENDING_MODE", "normal")
+        mode=params.get("BLENDING_MODE", "normal"),
+        base_desat=params.get("BASE_DESATURATION", 0.0)
     )
 
 
