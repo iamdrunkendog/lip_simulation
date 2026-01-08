@@ -6,6 +6,7 @@ def apply_lip_color(
     img_bgr: np.ndarray,
     mask: np.ndarray,
     r: int,
+    g: int,
     b: int,
     opacity: float = 0.8,
     mode: str = "normal",
