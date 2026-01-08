@@ -9,12 +9,14 @@ def apply_lip_color(
     g: int,
     b: int,
     opacity: float = 0.8,
+    mode: str = "normal"
 ):
     """
     img_bgr : BGR uint8 image
     mask    : lip mask (0~1 or 0~255)
     r, g, b : 0~255 integer
     opacity : 0.0 ~ 1.0
+    mode    : "normal" or "softlight"
     """
 
     # --- mask normalize ---
@@ -25,25 +27,51 @@ def apply_lip_color(
 
     mask_f = mask_f[..., None]
 
-    # --- Target Color (RGB -> HSV) ---
-    # Convert input RGB to BGR for OpenCV
-    target_bgr = np.array([[[b, g, r]]], dtype=np.uint8)
-    target_hsv = cv2.cvtColor(target_bgr, cv2.COLOR_BGR2HSV)[0, 0]
-    
-    target_h = float(target_hsv[0])  # 0~179
-    target_s = float(target_hsv[1])  # 0~255
+    if mode == "softlight":
+        # --- Soft Light Blending ---
+        # Formula (W3C Standard):
+        # if(Cs <= 0.5) B(Cb, Cs) = Cb - (1 - 2*Cs) * Cb * (1 - Cb)
+        # else B(Cb, Cs) = Cb + (2*Cs - 1) * (D(Cb) - Cb)
+        # D(Cb) = (Cb <= 0.25) ? ((16*Cb - 12)*Cb + 4)*Cb : sqrt(Cb)
+        
+        base = img_bgr.astype(np.float32) / 255.0
+        blend = np.array([b, g, r], dtype=np.float32) / 255.0 # Target BGR
+        
+        # broadcast blend color to shape
+        Cs = blend[None, None, :]
+        Cb = base
+        
+        # D(Cb)
+        D_Cb = np.where(Cb <= 0.25, ((16 * Cb - 12) * Cb + 4) * Cb, np.sqrt(Cb))
+        
+        # B(Cb, Cs)
+        res = np.where(Cs <= 0.5, 
+                       Cb - (1.0 - 2.0 * Cs) * Cb * (1.0 - Cb),
+                       Cb + (2.0 * Cs - 1.0) * (D_Cb - Cb))
+        
+        colored = (np.clip(res, 0, 1) * 255).astype(np.uint8)
 
-    # --- Source Image (BGR -> HSV) ---
-    hsv_img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-    
-    # We use uint8 for HSV replacement to stay within OpenCV's standard 0-179/0-255 ranges
-    hsv_img_out = hsv_img.copy()
-    hsv_img_out[..., 0] = int(target_h)
-    hsv_img_out[..., 1] = int(target_s)
-    # Value (hsv_img[..., 2]) is preserved from the original image
+    else:
+        # --- Normal Mode (Hue/Sat Replacement) ---
+        # --- Target Color (RGB -> HSV) ---
+        # Convert input RGB to BGR for OpenCV
+        target_bgr = np.array([[[b, g, r]]], dtype=np.uint8)
+        target_hsv = cv2.cvtColor(target_bgr, cv2.COLOR_BGR2HSV)[0, 0]
+        
+        target_h = float(target_hsv[0])  # 0~179
+        target_s = float(target_hsv[1])  # 0~255
 
-    # Convert back to BGR
-    colored = cv2.cvtColor(hsv_img_out, cv2.COLOR_HSV2BGR)
+        # --- Source Image (BGR -> HSV) ---
+        hsv_img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+        
+        # We use uint8 for HSV replacement to stay within OpenCV's standard 0-179/0-255 ranges
+        hsv_img_out = hsv_img.copy()
+        hsv_img_out[..., 0] = int(target_h)
+        hsv_img_out[..., 1] = int(target_s)
+        # Value (hsv_img[..., 2]) is preserved from the original image
+
+        # Convert back to BGR
+        colored = cv2.cvtColor(hsv_img_out, cv2.COLOR_HSV2BGR)
 
     # --- blend only on lip mask ---
     out = (

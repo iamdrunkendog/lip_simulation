@@ -25,7 +25,7 @@ PRESET_KEYS = [
     "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS",
 
     # Color
-    "LIP_COLOR_HEX", "COLOR_OPACITY",
+    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE",
 
     # Fake Normal
     "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN",
@@ -186,6 +186,15 @@ with st.sidebar.expander("Color", expanded=True):
         help="립스틱 색이 입술색을 덮는 정도입니다."
     )
 
+    BLENDING_MODE = st.radio(
+        "Blending Mode",
+        options=["normal", "softlight"],
+        index=0 if st.session_state.get("BLENDING_MODE", "normal") == "normal" else 1,
+        key="BLENDING_MODE",
+        horizontal=True,
+        help="'normal'은 색을 덮어씌우고, 'softlight'는 원본 질감을 살리며 자연스럽게 색을 입힙니다."
+    )
+
 
 # ------------------
 # Mask / Geometry
@@ -334,6 +343,8 @@ params = {
         "B": int(LIP_COLOR_HEX[5:7], 16),
         "OPACITY": COLOR_OPACITY,
     },
+    
+    "BLENDING_MODE": BLENDING_MODE,
     
 }
 
