@@ -25,7 +25,7 @@ PRESET_KEYS = [
     "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS",
 
     # Color
-    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE", "BASE_DESATURATION",
+    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE", "BASE_DESATURATION", "VALUE_WEIGHT",
 
     # Fake Normal
     "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN",
@@ -202,6 +202,13 @@ with st.sidebar.expander("Color", expanded=True):
         help="색을 입히기 전 원래 입술의 붉은 기를 중립화(무채색화)합니다. 블루, 퍼플 등의 특수 컬러 발색을 도웁니다."
     )
 
+    VALUE_WEIGHT = st.slider(
+        "Value Weight", 0.0, 1.0,
+        st.session_state.get("VALUE_WEIGHT", 0.0),
+        key="VALUE_WEIGHT",
+        help="대상 색상의 명도(Value)를 얼마나 반영할지 결정합니다. 다크 브라운 등 어두운 색상을 표현할 때 높여주세요."
+    )
+
 
 # ------------------
 # Mask / Geometry
@@ -353,6 +360,7 @@ params = {
     
     "BLENDING_MODE": BLENDING_MODE,
     "BASE_DESATURATION": BASE_DESATURATION,
+    "VALUE_WEIGHT": VALUE_WEIGHT,
     
 }
 

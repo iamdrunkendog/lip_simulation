@@ -10,7 +10,8 @@ def apply_lip_color(
     b: int,
     opacity: float = 0.8,
     mode: str = "normal",
-    base_desat: float = 0.0
+    base_desat: float = 0.0,
+    v_weight: float = 0.0
 ):
     """
     img_bgr    : BGR uint8 image
@@ -19,6 +20,7 @@ def apply_lip_color(
     opacity    : 0.0 ~ 1.0
     mode       : "normal" or "softlight"
     base_desat : 0.0 ~ 1.0 (0.0: keep original, 1.0: fully grayscale base)
+    v_weight   : 0.0 ~ 1.0 (명도 반영 비중. 1.0이면 대상 색상의 명도를 그대로 사용)
     """
 
     # --- mask normalize ---
@@ -74,6 +76,20 @@ def apply_lip_color(
         hsv_img_out[..., 1] = int(target_s)
 
         colored = cv2.cvtColor(hsv_img_out, cv2.COLOR_HSV2BGR)
+
+    # --- Value (Brightness) adjustment based on v_weight ---
+    if v_weight > 0:
+        target_bgr = np.array([[[b, g, r]]], dtype=np.uint8)
+        target_v = cv2.cvtColor(target_bgr, cv2.COLOR_BGR2HSV)[0, 0, 2]
+        
+        hsv_colored = cv2.cvtColor(colored, cv2.COLOR_BGR2HSV).astype(np.float32)
+        base_v = hsv_colored[..., 2]
+        
+        # V_final = V_base * (1 - w) + V_target * w
+        new_v = base_v * (1.0 - v_weight) + target_v * v_weight
+        hsv_colored[..., 2] = np.clip(new_v, 0, 255)
+        
+        colored = cv2.cvtColor(hsv_colored.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
     # --- blend only on lip mask ---
     # Important: The background outside opacity should be original img_bgr,
