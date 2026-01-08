@@ -74,10 +74,10 @@ def render_lips(image_path, params):
 
     img_colored = apply_lip_color(
         img,
-        lip_mask,
-        hue_shift=color_params.get("HUE_SHIFT", 0),
-        saturation=color_params.get("SATURATION", 1.0),
-        value=color_params.get("VALUE", 1.0),
+        lip01, # Use soft mask for feathering
+        r=color_params.get("R", 0),
+        g=color_params.get("G", 0),
+        b=color_params.get("B", 0),
         opacity=color_params.get("OPACITY", 0.8),
     )
 
@@ -159,7 +159,11 @@ def render_lips(image_path, params):
     # ------------------
     # Composite
     # ------------------
-    face = img_f.copy()
+    # Use img_colored as the base for the face instead of img_f
+    # so that the chosen lipstick color is actually applied.
+    face = img_colored.astype(np.float32) / 255.0
+    
+    # Add specular and clearcoat highlights (delta) only to the lip area
     delta = (out_roi - roi) * (lip01_roi > 0)[..., None]
     face[y0:y1+1, x0:x1+1] += delta
     face = np.clip(face, 0, 1)

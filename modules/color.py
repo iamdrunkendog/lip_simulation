@@ -5,14 +5,16 @@ import numpy as np
 def apply_lip_color(
     img_bgr: np.ndarray,
     mask: np.ndarray,
-    hue_shift=0,
-    saturation=1.0,
-    value=1.0,
-    opacity=0.8,
+    r: int,
+    g: int,
+    b: int,
+    opacity: float = 0.8,
 ):
     """
     img_bgr : BGR uint8 image
     mask    : lip mask (0~1 or 0~255)
+    r, g, b : 0~255 integer
+    opacity : 0.0 ~ 1.0
     """
 
     # --- mask normalize ---
@@ -23,24 +25,30 @@ def apply_lip_color(
 
     mask_f = mask_f[..., None]
 
-    # --- BGR -> HSV ---
-    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV).astype(np.float32)
+    # --- Target Color (RGB -> HSV) ---
+    # Convert input RGB to BGR for OpenCV
+    target_bgr = np.array([[[b, g, r]]], dtype=np.uint8)
+    target_hsv = cv2.cvtColor(target_bgr, cv2.COLOR_BGR2HSV)[0, 0]
+    
+    target_h = float(target_hsv[0])  # 0~179
+    target_s = float(target_hsv[1])  # 0~255
 
-    # Hue shift (OpenCV HSV: 0~179)
-    hsv[..., 0] = (hsv[..., 0] + hue_shift) % 180
+    # --- Source Image (BGR -> HSV) ---
+    hsv_img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    
+    # We use uint8 for HSV replacement to stay within OpenCV's standard 0-179/0-255 ranges
+    hsv_img_out = hsv_img.copy()
+    hsv_img_out[..., 0] = int(target_h)
+    hsv_img_out[..., 1] = int(target_s)
+    # Value (hsv_img[..., 2]) is preserved from the original image
 
-    # Saturation / Value
-    hsv[..., 1] *= saturation
-    hsv[..., 2] *= value
-
-    hsv[..., 1:] = np.clip(hsv[..., 1:], 0, 255)
-
-    colored = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+    # Convert back to BGR
+    colored = cv2.cvtColor(hsv_img_out, cv2.COLOR_HSV2BGR)
 
     # --- blend only on lip mask ---
     out = (
-        img_bgr * (1.0 - mask_f * opacity)
-        + colored * (mask_f * opacity)
+        img_bgr.astype(np.float32) * (1.0 - mask_f * opacity)
+        + colored.astype(np.float32) * (mask_f * opacity)
     )
 
-    return out.astype(np.uint8)
+    return np.clip(out, 0, 255).astype(np.uint8)

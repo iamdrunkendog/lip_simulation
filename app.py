@@ -24,6 +24,9 @@ PRESET_KEYS = [
     # Mask / Geometry
     "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS",
 
+    # Color
+    "LIP_COLOR_HEX", "COLOR_OPACITY",
+
     # Fake Normal
     "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN",
     "HIGH_BLUR_SIGMA", "HIGH_GAIN", "ALPHA",
@@ -167,22 +170,14 @@ st.sidebar.divider()
 st.sidebar.header("Parameters")
 
 with st.sidebar.expander("Color", expanded=True):
-    HUE_SHIFT = st.slider(
-        "HUE_SHIFT", -30, 30,
-        st.session_state.get("HUE_SHIFT", 0),
-        help="립 컬러의 색상을 회전시킵니다."
-    )
-
-    SATURATION = st.slider(
-        "SATURATION", 0.0, 2.0,
-        st.session_state.get("SATURATION", 1.0),
-        help="색의 선명도를 조절합니다."
-    )
-
-    VALUE = st.slider(
-        "VALUE", 0.5, 1.5,
-        st.session_state.get("VALUE", 1.0),
-        help="색의 밝기를 조절합니다."
+    # Default to a red-ish color
+    default_color = st.session_state.get("LIP_COLOR_HEX", "#D01020")
+    
+    LIP_COLOR_HEX = st.color_picker(
+        "Lip Color", 
+        value=default_color,
+        key="LIP_COLOR_HEX",
+        help="원하는 립 컬러를 선택하세요."
     )
 
     COLOR_OPACITY = st.slider(
@@ -200,14 +195,14 @@ with st.sidebar.expander("Mask / Geometry", expanded=False):
         "EDGE_UPPER", 1, 20,
         st.session_state.get("EDGE_UPPER", 6), 1,
         key="EDGE_UPPER",
-        help="윗입술 가장자리의 마스크 경계를 얼마나 안쪽/바깥쪽으로 잡을지 조절합니다."
+        help="윗입술 가장자리의 마스크 경계를 얼마나 안쪽/바깥쪽으로 잡을지 조절합니다. 립 컬러의 경계 부드러움(fuzziness)도 함께 조절됩니다."
     )
 
     EDGE_LOWER = st.slider(
         "EDGE_LOWER", 1, 20,
         st.session_state.get("EDGE_LOWER", 8), 1,
         key="EDGE_LOWER",
-        help="아랫입술 가장자리의 마스크 두께 및 경계 강도를 조절합니다."
+        help="아랫입술 가장자리의 마스크 두께 및 경계 강도를 조절합니다. 립 컬러의 경계 부드러움(fuzziness)도 함께 조절됩니다."
     )
 
     MIDLINE_BIAS = st.slider(
@@ -296,7 +291,7 @@ with st.sidebar.expander("Clear Coat", expanded=True):
 with st.sidebar.expander("Highlight Shape", expanded=True):
     UPPER_CENTER = st.slider(
         "UPPER_CENTER", -0.9, -0.1,
-        st.session_state.get("UPPER_CENTER", -0.38), 0.01, key="UPPER_CENTER"
+        st.session_state.get("UPPER_CENTER", -0.8), 0.01, key="UPPER_CENTER"
     )
     LOWER_CENTER = st.slider(
         "LOWER_CENTER", 0.0, 1.0,
@@ -334,9 +329,9 @@ params = {
     "LOWER_CENTER": LOWER_CENTER,
 
     "COLOR": {
-        "HUE_SHIFT": HUE_SHIFT,
-        "SATURATION": SATURATION,
-        "VALUE": VALUE,
+        "R": int(LIP_COLOR_HEX[1:3], 16),
+        "G": int(LIP_COLOR_HEX[3:5], 16),
+        "B": int(LIP_COLOR_HEX[5:7], 16),
         "OPACITY": COLOR_OPACITY,
     },
     

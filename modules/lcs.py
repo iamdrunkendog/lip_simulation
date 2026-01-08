@@ -23,17 +23,50 @@ def compute_lip_coordinate_system(upper_mask, lower_mask, midline_bias=0.12):
     x_hat /= np.max(np.abs(x_hat[lip])) + 1e-6
     x_hat *= lip
 
-    y_hat = yy - y_mid
-    y_hat[y_hat < 0] /= (y_mid - ys_u.min() + 1e-6)
-    y_hat[y_hat > 0] /= (ys_l.max() - y_mid + 1e-6)
-    y_hat = np.clip(y_hat, -1, 1) * lip
+    y_hat = np.zeros_like(yy)
+    r = np.zeros_like(yy)
+    
+    for x in range(w):
+        ys_lip = np.where(lip[:, x])[0]
+        if len(ys_lip) == 0:
+            continue
+            
+        y_min = ys_lip.min()
+        y_max = ys_lip.max()
+        
+        # Calculate local y_mid for this column
+        # Finding the boundary between upper and lower in this column
+        ys_u_col = np.where(upper[:, x])[0]
+        ys_l_col = np.where(lower[:, x])[0]
+        
+        if len(ys_u_col) > 0 and len(ys_l_col) > 0:
+            y_mid_col = (1 - midline_bias) * 0.5 * (ys_u_col.max() + ys_l_col.min()) + midline_bias * ys_u_col.max()
+        elif len(ys_u_col) > 0:
+            y_mid_col = ys_u_col.max()
+        elif len(ys_l_col) > 0:
+            y_mid_col = ys_l_col.min()
+        else:
+            y_mid_col = (y_min + y_max) * 0.5
 
-    r = np.zeros_like(y_hat)
-    for y in range(h):
-        xs_line = np.where(lip[y])[0]
-        if len(xs_line) > 1:
-            hw = 0.5 * (xs_line.max() - xs_line.min())
-            r[y] = abs(y - y_mid) / (hw + 1e-6)
+        # Normalize y_hat locally
+        col_y = yy[:, x]
+        mask_col = lip[:, x]
+        
+        # Upper part
+        idx_u = (col_y < y_mid_col) & mask_col
+        if (y_mid_col - y_min) > 1e-6:
+            y_hat[idx_u, x] = (col_y[idx_u] - y_mid_col) / (y_mid_col - y_min)
+            
+        # Lower part
+        idx_l = (col_y >= y_mid_col) & mask_col
+        if (y_max - y_mid_col) > 1e-6:
+            y_hat[idx_l, x] = (col_y[idx_l] - y_mid_col) / (y_max - y_mid_col)
 
-    r = np.clip(r, 0, 1) * lip
+        # r calculation (distance from center line relative to half-height)
+        y_hat[mask_col, x] = np.clip(y_hat[mask_col, x], -1, 1)
+        r[mask_col, x] = np.abs(y_hat[mask_col, x])
+
+    x_hat *= lip
+    y_hat *= lip
+    r *= lip
     return x_hat, y_hat, r
