@@ -349,12 +349,12 @@ st.header("Zoomed Comparison")
 zcol1, zcol2 = st.columns(2)
 
 with zcol1:
-    st.subheader("Zoomed Final")
-    st.image(results["final_roi"], channels="BGR", use_container_width=True)
-
-with zcol2:
     st.subheader("Zoomed Original")
     st.image(results["original_roi"], channels="BGR", use_container_width=True)
+
+with zcol2:
+    st.subheader("Zoomed Final")
+    st.image(results["final_roi"], channels="BGR", use_container_width=True)
 
 st.divider()
 
