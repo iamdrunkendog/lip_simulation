@@ -345,15 +345,29 @@ results = render_lips(st.session_state.test_image, params)
 # =====================================================
 # Display
 # =====================================================
+st.header("Zoomed Comparison")
+zcol1, zcol2 = st.columns(2)
+
+with zcol1:
+    st.subheader("Zoomed Original")
+    st.image(results["original_roi"], channels="BGR", use_container_width=True)
+
+with zcol2:
+    st.subheader("Zoomed Final")
+    st.image(results["final_roi"], channels="BGR", use_container_width=True)
+
+st.divider()
+
+st.header("Full Face Comparison")
 col1, col2, col3 = st.columns(3)
 
 with col3:
     st.subheader("Original")
-    st.image(results["original"], channels="BGR", width=700)
+    st.image(results["original"], channels="BGR", use_container_width=True)
 
 with col2:
     st.subheader("Final")
-    st.image(results["final"], channels="BGR", width=700)
+    st.image(results["final"], channels="BGR", use_container_width=True)
 
 with col1:
     st.subheader("Debug Maps")

@@ -175,6 +175,9 @@ def render_lips(image_path, params):
         "original": img,
         "final": (face * 255).astype(np.uint8),
 
+        "original_roi": img[y0:y1+1, x0:x1+1],
+        "final_roi": (face[y0:y1+1, x0:x1+1] * 255).astype(np.uint8),
+
         "lip01": (lip01_roi * 255).astype(np.uint8),
 
         "normal_Nx": ((N[..., 0] * 0.5 + 0.5) * 255).astype(np.uint8),
