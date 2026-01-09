@@ -30,6 +30,7 @@ PRESET_KEYS = [
     # Fake Normal
     "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN",
     "HIGH_BLUR_SIGMA", "HIGH_GAIN", "ALPHA",
+    "TEXTURE_SMOOTHING",
 
     # Specular
     "SPEC_STRENGTH", "SHININESS",
@@ -38,7 +39,7 @@ PRESET_KEYS = [
     "CLEAR_STRENGTH", "CLEAR_EXPONENT",
 
     # Highlight Shape
-    "UPPER_CENTER", "LOWER_CENTER",
+    "UPPER_CENTER", "UPPER_WIDTH", "LOWER_CENTER", "LOWER_WIDTH",
 
     # Light
     "LIGHT_DIR",
@@ -86,15 +87,19 @@ def export_preset(name: str):
     return path
 
 
-def load_preset(path: str):
+def load_preset(path: str, filter_keys: list = None):
     """
     Load preset keys into session_state safely.
     Restore LIGHT_DIR as (3,) float32 numpy vector.
+    If filter_keys is provided, only those keys are updated.
     """
     with open(path, "r", encoding="utf-8") as f:
         preset = json.load(f)
 
     for k, v in preset.items():
+        if filter_keys is not None and k not in filter_keys:
+            continue
+            
         if k == "LIGHT_DIR":
             st.session_state[k] = safe_light_dir(v)
         else:
@@ -126,6 +131,33 @@ selected_preset = st.sidebar.selectbox(
 if selected_preset:
     load_preset(os.path.join(PRESET_DIR, f"{selected_preset}.json"))
     st.sidebar.success(f"Loaded preset: {selected_preset}")
+
+st.sidebar.divider()
+
+# =====================================================
+# Sidebar – Quick Style
+# =====================================================
+st.sidebar.header("Quick Style (Gemini Recommendation)")
+st.sidebar.caption("제형(Texture) 관련 파라미터만 변경됩니다.")
+
+# Define texture-only keys to be updated by Quick Style buttons
+TEXTURE_KEYS = [
+    "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN", "HIGH_BLUR_SIGMA", "HIGH_GAIN", "ALPHA",
+    "TEXTURE_SMOOTHING",
+    "SPEC_STRENGTH", "SHININESS", "CLEAR_STRENGTH", "CLEAR_EXPONENT", "BLENDING_MODE"
+]
+
+if st.sidebar.button("💎 Glossy Style", use_container_width=True):
+    load_preset(os.path.join(PRESET_DIR, "glossy.json"), filter_keys=TEXTURE_KEYS)
+    st.rerun()
+
+if st.sidebar.button("✨ Satin Style", use_container_width=True):
+    load_preset(os.path.join(PRESET_DIR, "satin.json"), filter_keys=TEXTURE_KEYS)
+    st.rerun()
+
+if st.sidebar.button("☁️ Matte Style", use_container_width=True):
+    load_preset(os.path.join(PRESET_DIR, "matte.json"), filter_keys=TEXTURE_KEYS)
+    st.rerun()
 
 st.sidebar.divider()
 
@@ -189,7 +221,7 @@ with st.sidebar.expander("Color", expanded=True):
     BLENDING_MODE = st.radio(
         "Blending Mode",
         options=["normal", "softlight"],
-        index=0 if st.session_state.get("BLENDING_MODE", "normal") == "normal" else 1,
+        index=1 if st.session_state.get("BLENDING_MODE", "softlight") == "softlight" else 0,
         key="BLENDING_MODE",
         horizontal=True,
         help="'normal'은 색을 덮어씌우고, 'softlight'는 원본 질감을 살리며 자연스럽게 색을 입힙니다."
@@ -268,6 +300,13 @@ with st.sidebar.expander("Fake Normal", expanded=True):
         help="광택 하이라이트의 강도를 조절합니다."
     )
 
+    TEXTURE_SMOOTHING = st.slider(
+        "TEXTURE_SMOOTHING", 0.0, 3.0,
+        st.session_state.get("TEXTURE_SMOOTHING", 0.0), 0.1,
+        key="TEXTURE_SMOOTHING",
+        help="표면 텍스처를 매끄럽게 합니다. 높을수록 자글자글한 픽셀 노이즈가 사라지고 물광 느낌이 납니다."
+    )
+
     ALPHA = st.slider(
         "ALPHA", 0.0, 1.0,
         st.session_state.get("ALPHA", 0.25), 0.01,
@@ -280,18 +319,30 @@ with st.sidebar.expander("Fake Normal", expanded=True):
 # Specular
 # ------------------
 with st.sidebar.expander("Specular", expanded=True):
+    # Fixed Light Direction (as per user request to remove sliders)
+    LIGHT_DIR = [0.0, -0.25, 1.0]
+
+    st.subheader("Specular Parameters")
     SPEC_STRENGTH = st.slider(
-        "SPEC_STRENGTH", 0.0, 0.5,
-        st.session_state.get("SPEC_STRENGTH", 0.18), 0.01,
+        "SPEC_STRENGTH", 0.0, 1.05,
+        float(st.session_state.get("SPEC_STRENGTH", 0.18)), 0.01,
         key="SPEC_STRENGTH",
-        help="직접 반사광의 세기입니다. 글로시한 느낌에 가장 큰 영향을 줍니다."
+        help="직접 반사광의 세기입니다. 1.0을 넘기지 않도록 제한되었습니다."
     )
 
     SHININESS = st.slider(
-        "SHININESS", 10, 200,
-        st.session_state.get("SHININESS", 60), 1,
+        "SHININESS", 10.0, 800.0,
+        float(st.session_state.get("SHININESS", 60.0)), 1.0,
         key="SHININESS",
-        help="하이라이트의 날카로움입니다. 높을수록 작은 영역에 강한 반짝임이 생깁니다."
+        help="하이라이트의 날카로움입니다. 높을수록 아주 작은 영역에 강한 반짝임이 생깁니다."
+    )
+
+    SPEC_BLEND_MODE = st.radio(
+        "Specular Blend Mode",
+        options=["screen", "add", "color_dodge", "overlay", "normal"],
+        index=0,
+        horizontal=True,
+        help="Color Dodge is recommended for natural highlights that preserve lip color."
     )
 
 
@@ -300,11 +351,11 @@ with st.sidebar.expander("Specular", expanded=True):
 # ------------------
 with st.sidebar.expander("Clear Coat", expanded=True):
     CLEAR_STRENGTH = st.slider(
-        "CLEAR_STRENGTH", 0.0, 0.6,
+        "CLEAR_STRENGTH", 0.0, 2.0,
         st.session_state.get("CLEAR_STRENGTH", 0.4), 0.01, key="CLEAR_STRENGTH"
     )
     CLEAR_EXPONENT = st.slider(
-        "CLEAR_EXPONENT", 5, 120,
+        "CLEAR_EXPONENT", 5, 500,
         st.session_state.get("CLEAR_EXPONENT", 30), 1, key="CLEAR_EXPONENT"
     )
 
@@ -316,9 +367,20 @@ with st.sidebar.expander("Highlight Shape", expanded=True):
         "UPPER_CENTER", -0.9, -0.1,
         st.session_state.get("UPPER_CENTER", -0.8), 0.01, key="UPPER_CENTER"
     )
+    UPPER_WIDTH = st.slider(
+        "UPPER_WIDTH", 0.05, 0.5,
+        st.session_state.get("UPPER_WIDTH", 0.25), 0.01, key="UPPER_WIDTH",
+        help="윗입술 하이라이트의 두께(세로 폭)를 조절합니다."
+    )
+
     LOWER_CENTER = st.slider(
         "LOWER_CENTER", 0.0, 1.0,
         st.session_state.get("LOWER_CENTER", 0.55), 0.01, key="LOWER_CENTER"
+    )
+    LOWER_WIDTH = st.slider(
+        "LOWER_WIDTH", 0.05, 0.5,
+        st.session_state.get("LOWER_WIDTH", 0.35), 0.01, key="LOWER_WIDTH",
+        help="아랫입술 하이라이트의 두께(세로 폭)를 조절합니다."
     )
 
 # =====================================================
@@ -335,10 +397,12 @@ params = {
     "HEIGHT_GAIN": HEIGHT_GAIN,
     "HIGH_BLUR_SIGMA": HIGH_BLUR_SIGMA,
     "HIGH_GAIN": HIGH_GAIN,
+    "TEXTURE_SMOOTHING": TEXTURE_SMOOTHING,
     "ALPHA": ALPHA,
 
     "SPEC_STRENGTH": SPEC_STRENGTH,
     "SHININESS": SHININESS,
+    "SPEC_BLEND_MODE": SPEC_BLEND_MODE.lower(),
 
     # IMPORTANT: Always coerce to (3,) float32
     "LIGHT_DIR": safe_light_dir(
@@ -349,7 +413,9 @@ params = {
     "CLEAR_EXPONENT": CLEAR_EXPONENT,
 
     "UPPER_CENTER": UPPER_CENTER,
+    "UPPER_WIDTH": UPPER_WIDTH,
     "LOWER_CENTER": LOWER_CENTER,
+    "LOWER_WIDTH": LOWER_WIDTH,
 
     "COLOR": {
         "R": int(LIP_COLOR_HEX[1:3], 16),

@@ -6,7 +6,7 @@ from modules.lip_landmarks import get_lip_masks
 from modules.soft_mask import combine_upper_lower
 from modules.fake_normal import build_layered_fake_normal
 from modules.lcs import compute_lip_coordinate_system
-from modules.specular import compute_specular, screen
+from modules.specular import compute_specular, screen, blend_specular
 from modules.clearcoat import build_clearcoat_weight, apply_clearcoat
 from modules.color import apply_lip_color
 
@@ -37,9 +37,9 @@ def load_image_exif_safe(path):
     except Exception:
         pass
 
+    img_pil = img_pil.convert("RGB")
     img = np.array(img_pil)
-    if img.ndim == 3:
-        img = img[:, :, ::-1].copy()  # RGB → BGR
+    img = img[:, :, ::-1].copy()  # RGB → BGR
     return img
 
 
@@ -116,7 +116,8 @@ def render_lips(image_path, params):
         height_gain=params["HEIGHT_GAIN"],
         high_blur_sigma=params["HIGH_BLUR_SIGMA"],
         high_gain=params["HIGH_GAIN"],
-        alpha=params["ALPHA"]
+        alpha=params["ALPHA"],
+        surface_smoothing=params.get("TEXTURE_SMOOTHING", 0.0)
     )
 
     # -------------------
@@ -130,10 +131,13 @@ def render_lips(image_path, params):
         shininess=params["SHININESS"]
     )
 
-    out_roi = screen(roi, spec[..., None])
+    out_roi = blend_specular(
+        roi, spec,
+        mode=params.get("SPEC_BLEND_MODE", "screen")
+    )
 
     # ------------------
-    # LCS + Clearcoat
+    # LCS (Coordinate System)
     # ------------------
     x_hat, y_hat, r = compute_lip_coordinate_system(
         upper_roi,
@@ -141,15 +145,23 @@ def render_lips(image_path, params):
         params["MIDLINE_BIAS"]
     )
 
+    # ------------------
+    # Clearcoat Shape (HWF)
+    # ------------------
     HWF = build_clearcoat_weight(
         x_hat, y_hat, r,
         (upper_roi > 0).astype(np.float32),
         (lower_roi > 0).astype(np.float32),
         lip01_roi,
         lower_center=params["LOWER_CENTER"],
-        upper_center=params["UPPER_CENTER"]
+        upper_center=params["UPPER_CENTER"],
+        lower_sigma_y=params.get("LOWER_WIDTH", 0.35),
+        upper_sigma_y=params.get("UPPER_WIDTH", 0.25)
     )
 
+    # ------------------
+    # Clearcoat Apply
+    # ------------------
     clear = apply_clearcoat(
         N[..., 2],
         HWF,

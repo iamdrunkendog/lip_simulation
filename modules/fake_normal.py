@@ -31,24 +31,33 @@ def build_layered_fake_normal(
     height_gain=8.0,
     high_blur_sigma=2.0,
     high_gain=3.0,
-    alpha=0.25
+    alpha=0.25,
+    surface_smoothing=0.0
 ):
-    # LOW
+    # 1. LOW (Mask Gradient based)
     liquid_mask = make_liquid_mask(lip01_roi)
     height_low = cv2.GaussianBlur(
         liquid_mask * height_gain, (0, 0), liquid_blur_sigma
     )
     N_low = generate_normal_from_height(height_low)
 
-    # HIGH
+    # 2. HIGH (Detail texture based)
     gray = cv2.cvtColor((roi * 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)
     gray = gray.astype(np.float32) / 255.0
+    
+    # Pre-smoothing (Surface Tension Simulation)
+    # Reduces high-frequency pixel noise to avoid aliasing in highlights
+    if surface_smoothing > 0:
+        # Kernel size must be odd
+        k = int(surface_smoothing * 2) * 2 + 1 
+        gray = cv2.GaussianBlur(gray, (k, k), surface_smoothing)
+
     low_gray = cv2.GaussianBlur(gray, (0, 0), high_blur_sigma)
     high = (gray - low_gray) * (lip01_roi > 0)
 
     N_high = generate_normal_from_height(high * high_gain)
 
-    # MERGE
+    # 3. MERGE
     N = N_low + alpha * N_high
     N /= (np.linalg.norm(N, axis=2, keepdims=True) + 1e-6)
     return N
