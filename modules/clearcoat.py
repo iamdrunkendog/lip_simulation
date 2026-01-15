@@ -4,7 +4,8 @@ def build_clearcoat_weight(
     x_hat, y_hat, r, upper, lower, lip01,
     lower_center=0.55, lower_sigma_y=0.35, lower_sigma_x=0.85,
     upper_center=-0.8, upper_sigma_y=0.25, upper_sigma_x=0.35,
-    edge_gamma=0.3
+    edge_gamma=0.3,
+    cupid_boost=0.0
 ):
     edge = (1 - r) ** edge_gamma
 
@@ -17,6 +18,15 @@ def build_clearcoat_weight(
     strip *= upper
 
     HWF = np.clip(blob + strip, 0, 1)
+    
+    # [NEW] Cupid Boost (Specific boost for cupid's bow area)
+    # y_hat is approx -1.0 at the top edge of the upper lip
+    if cupid_boost > 0:
+        cupid_factor = np.exp(-0.5 * ((y_hat - (-1.0)) / 0.25)**2)
+        # Apply boost primarily to the upper lip mask
+        HWF += cupid_factor * cupid_boost * upper
+        HWF = np.clip(HWF, 0, 1)
+
     HWF *= edge * lip01
     return HWF
 

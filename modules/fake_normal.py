@@ -60,4 +60,9 @@ def build_layered_fake_normal(
     # 3. MERGE
     N = N_low + alpha * N_high
     N /= (np.linalg.norm(N, axis=2, keepdims=True) + 1e-6)
-    return N
+
+    return {
+        "final": N,
+        "low": N_low,
+        "high": N_high
+    }

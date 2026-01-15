@@ -25,7 +25,7 @@ PRESET_KEYS = [
     "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS",
 
     # Color
-    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE", "BASE_DESATURATION", "VALUE_WEIGHT",
+    "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE", "BASE_DESATURATION", "VALUE_WEIGHT", "DEEP_COLOR",
 
     # Fake Normal
     "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN",
@@ -36,10 +36,10 @@ PRESET_KEYS = [
     "SPEC_STRENGTH", "SHININESS",
 
     # Clear Coat
-    "CLEAR_STRENGTH", "CLEAR_EXPONENT",
-
+    "CLEAR_STRENGTH", "CLEAR_EXPONENT", "CLEAR_LIGHT_X",
+    
     # Highlight Shape
-    "UPPER_CENTER", "UPPER_WIDTH", "LOWER_CENTER", "LOWER_WIDTH",
+    "UPPER_CENTER", "UPPER_WIDTH", "LOWER_CENTER", "LOWER_WIDTH", "CUPID_BOOST",
 
     # Light
     "LIGHT_DIR",
@@ -79,6 +79,16 @@ def export_preset(name: str):
             preset[k] = v.tolist()
         else:
             preset[k] = v
+
+    # Add explicit RGB for external usage
+    if "LIP_COLOR_HEX" in st.session_state:
+        # "#RRGGBB" -> [R, G, B]
+        hex_code = st.session_state["LIP_COLOR_HEX"].lstrip("#")
+        if len(hex_code) == 6:
+            r = int(hex_code[0:2], 16)
+            g = int(hex_code[2:4], 16)
+            b = int(hex_code[4:6], 16)
+            preset["LIP_COLOR_RGB"] = [r, g, b]
 
     path = os.path.join(PRESET_DIR, f"{name}.json")
     with open(path, "w", encoding="utf-8") as f:
@@ -138,25 +148,19 @@ st.sidebar.divider()
 # Sidebar – Quick Style
 # =====================================================
 st.sidebar.header("Quick Style (Gemini Recommendation)")
-st.sidebar.caption("제형(Texture) 관련 파라미터만 변경됩니다.")
-
-# Define texture-only keys to be updated by Quick Style buttons
-TEXTURE_KEYS = [
-    "LIQUID_BLUR_SIGMA", "HEIGHT_GAIN", "HIGH_BLUR_SIGMA", "HIGH_GAIN", "ALPHA",
-    "TEXTURE_SMOOTHING",
-    "SPEC_STRENGTH", "SHININESS", "CLEAR_STRENGTH", "CLEAR_EXPONENT", "BLENDING_MODE"
-]
+# st.sidebar.caption("제형(Texture) 관련 파라미터만 변경됩니다.") -> Removed by user request for full preset integration
 
 if st.sidebar.button("💎 Glossy Style", use_container_width=True):
-    load_preset(os.path.join(PRESET_DIR, "glossy.json"), filter_keys=TEXTURE_KEYS)
+    # Load FULL preset (None filter) to include color/blending settings
+    load_preset(os.path.join(PRESET_DIR, "glossy.json"), filter_keys=None)
     st.rerun()
 
 if st.sidebar.button("✨ Satin Style", use_container_width=True):
-    load_preset(os.path.join(PRESET_DIR, "satin.json"), filter_keys=TEXTURE_KEYS)
+    load_preset(os.path.join(PRESET_DIR, "satin.json"), filter_keys=None)
     st.rerun()
 
 if st.sidebar.button("☁️ Matte Style", use_container_width=True):
-    load_preset(os.path.join(PRESET_DIR, "matte.json"), filter_keys=TEXTURE_KEYS)
+    load_preset(os.path.join(PRESET_DIR, "matte.json"), filter_keys=None)
     st.rerun()
 
 st.sidebar.divider()
@@ -239,6 +243,13 @@ with st.sidebar.expander("Color", expanded=True):
         st.session_state.get("VALUE_WEIGHT", 0.0),
         key="VALUE_WEIGHT",
         help="대상 색상의 명도(Value)를 얼마나 반영할지 결정합니다. 다크 브라운 등 어두운 색상을 표현할 때 높여주세요."
+    )
+
+    DEEP_COLOR = st.slider(
+        "Deep Color", 0.0, 1.0,
+        st.session_state.get("DEEP_COLOR", 0.0),
+        key="DEEP_COLOR",
+        help="선택한 색상을 더 깊고 진하게 발색합니다. (채도↑ 명도↓)"
     )
 
 
@@ -359,6 +370,20 @@ with st.sidebar.expander("Clear Coat", expanded=True):
         st.session_state.get("CLEAR_EXPONENT", 30), 1, key="CLEAR_EXPONENT"
     )
 
+    CLEAR_LIGHT_X = st.slider(
+        "CLEAR_LIGHT_X", -1.0, 1.0,
+        st.session_state.get("CLEAR_LIGHT_X", 0.0), 0.01,
+        key="CLEAR_LIGHT_X",
+        help="코팅 광택을 계산할 가상 광원의 좌우 기울기입니다. 입술산 등 측면 경사가 있는 부위의 광택을 조절할 수 있습니다."
+    )
+
+    CLEAR_NORMAL_INFLUENCE = st.slider(
+        "CLEAR_NORMAL_INFLUENCE", 0.0, 1.0,
+        st.session_state.get("CLEAR_NORMAL_INFLUENCE", 1.0), 0.01,
+        key="CLEAR_NORMAL_INFLUENCE",
+        help="1.0: 입체감(정면광) 100% 반영. 0.0: 입체감 무시하고 마스크 영역 전체에 광택 균일하게 적용."
+    )
+
 # ------------------
 # Highlight Shape
 # ------------------
@@ -371,6 +396,12 @@ with st.sidebar.expander("Highlight Shape", expanded=True):
         "UPPER_WIDTH", 0.05, 0.5,
         st.session_state.get("UPPER_WIDTH", 0.25), 0.01, key="UPPER_WIDTH",
         help="윗입술 하이라이트의 두께(세로 폭)를 조절합니다."
+    )
+
+    CUPID_BOOST = st.slider(
+        "CUPID_BOOST", 0.0, 2.0,
+        st.session_state.get("CUPID_BOOST", 0.0), 0.1, key="CUPID_BOOST",
+        help="윗입술 산(Cupid's bow) 라인의 광택 가중치를 강제로 증폭시킵니다."
     )
 
     LOWER_CENTER = st.slider(
@@ -411,11 +442,14 @@ params = {
 
     "CLEAR_STRENGTH": CLEAR_STRENGTH,
     "CLEAR_EXPONENT": CLEAR_EXPONENT,
+    "CLEAR_LIGHT_X": CLEAR_LIGHT_X,
+    "CLEAR_NORMAL_INFLUENCE": CLEAR_NORMAL_INFLUENCE,
 
     "UPPER_CENTER": UPPER_CENTER,
     "UPPER_WIDTH": UPPER_WIDTH,
     "LOWER_CENTER": LOWER_CENTER,
     "LOWER_WIDTH": LOWER_WIDTH,
+    "CUPID_BOOST": CUPID_BOOST,
 
     "COLOR": {
         "R": int(LIP_COLOR_HEX[1:3], 16),
@@ -427,6 +461,7 @@ params = {
     "BLENDING_MODE": BLENDING_MODE,
     "BASE_DESATURATION": BASE_DESATURATION,
     "VALUE_WEIGHT": VALUE_WEIGHT,
+    "DEEP_COLOR": DEEP_COLOR,
     
 }
 
@@ -446,7 +481,7 @@ with zcol1:
     st.image(results["original_roi"], channels="BGR", use_container_width=True)
 
 with zcol2:
-    st.subheader("Zoomed Final")
+    st.subheader("Final")
     st.image(results["final_roi"], channels="BGR", use_container_width=True)
 
 st.divider()
@@ -479,7 +514,11 @@ with col1:
         st.image(results["hwf"], width=500)
 
     with st.expander("Specular", expanded=False):
+        st.markdown("**Original Specular (White)**")
         st.image(results["spec"], width=500)
+        
+        st.markdown("**Colored Specular (Blended Source)**")
+        st.image(results["spec_colored"], width=500, channels="BGR")
 
     with st.expander("Clear Coat", expanded=True):
         st.image(results["clear_weight"], width=500)

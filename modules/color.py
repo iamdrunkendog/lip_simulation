@@ -11,7 +11,8 @@ def apply_lip_color(
     opacity: float = 0.8,
     mode: str = "normal",
     base_desat: float = 0.0,
-    v_weight: float = 0.0
+    v_weight: float = 0.0,
+    color_depth: float = 0.0
 ):
     """
     img_bgr    : BGR uint8 image
@@ -21,7 +22,23 @@ def apply_lip_color(
     mode       : "normal" or "softlight"
     base_desat : 0.0 ~ 1.0 (0.0: keep original, 1.0: fully grayscale base)
     v_weight   : 0.0 ~ 1.0 (명도 반영 비중. 1.0이면 대상 색상의 명도를 그대로 사용)
+    color_depth: 0.0 ~ 1.0 (색상 농도. 높을수록 채도 증가, 명도 감소)
     """
+
+    # --- Pre-processing: Deep Color (Enhance Input Color) ---
+    if color_depth > 0:
+        # RGB -> HSV
+        enc_c = np.array([[[b, g, r]]], dtype=np.uint8)
+        enc_hsv = cv2.cvtColor(enc_c, cv2.COLOR_BGR2HSV).astype(np.float32)
+        
+        # Saturation boost (max 1.5x)
+        enc_hsv[..., 1] *= (1.0 + color_depth * 0.5)
+        # Value darken (max 40% darker)
+        enc_hsv[..., 2] *= (1.0 - color_depth * 0.4)
+        
+        enc_hsv = np.clip(enc_hsv, 0, 255)
+        enc_bgr = cv2.cvtColor(enc_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)[0,0]
+        b, g, r = int(enc_bgr[0]), int(enc_bgr[1]), int(enc_bgr[2])
 
     # --- mask normalize ---
     if mask.max() > 1:
