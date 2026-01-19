@@ -219,6 +219,7 @@ with st.sidebar.expander("Color", expanded=True):
     COLOR_OPACITY = st.slider(
         "COLOR_OPACITY", 0.0, 1.0,
         st.session_state.get("COLOR_OPACITY", 0.8),
+        key="COLOR_OPACITY",
         help="립스틱 색이 입술색을 덮는 정도입니다."
     )
 
