@@ -3,7 +3,7 @@
   "EDGE_LOWER": 19,
   "MIDLINE_BIAS": 0.26,
   "LIP_COLOR_HEX": "#d14143",
-  "COLOR_OPACITY": null,
+  "COLOR_OPACITY": 1.0,
   "BLENDING_MODE": "softlight",
   "BASE_DESATURATION": 0.08,
   "VALUE_WEIGHT": 0.12,
