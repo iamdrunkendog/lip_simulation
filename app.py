@@ -113,7 +113,8 @@ def load_preset(path: str, filter_keys: list = None):
         if k == "LIGHT_DIR":
             st.session_state[k] = safe_light_dir(v)
         else:
-            st.session_state[k] = v
+            if v is not None:
+                st.session_state[k] = v
 
 
 # =====================================================
@@ -144,26 +145,7 @@ if selected_preset:
 
 st.sidebar.divider()
 
-# =====================================================
-# Sidebar – Quick Style
-# =====================================================
-st.sidebar.header("Quick Style (Gemini Recommendation)")
-# st.sidebar.caption("제형(Texture) 관련 파라미터만 변경됩니다.") -> Removed by user request for full preset integration
 
-if st.sidebar.button("💎 Glossy Style", use_container_width=True):
-    # Load FULL preset (None filter) to include color/blending settings
-    load_preset(os.path.join(PRESET_DIR, "glossy.json"), filter_keys=None)
-    st.rerun()
-
-if st.sidebar.button("✨ Satin Style", use_container_width=True):
-    load_preset(os.path.join(PRESET_DIR, "satin.json"), filter_keys=None)
-    st.rerun()
-
-if st.sidebar.button("☁️ Matte Style", use_container_width=True):
-    load_preset(os.path.join(PRESET_DIR, "matte.json"), filter_keys=None)
-    st.rerun()
-
-st.sidebar.divider()
 
 # =====================================================
 # Sidebar – Test Image
@@ -216,9 +198,11 @@ with st.sidebar.expander("Color", expanded=True):
         help="원하는 립 컬러를 선택하세요."
     )
 
+    if st.session_state.get("COLOR_OPACITY") is None:
+        st.session_state["COLOR_OPACITY"] = 0.8
+
     COLOR_OPACITY = st.slider(
         "COLOR_OPACITY", 0.0, 1.0,
-        st.session_state.get("COLOR_OPACITY", 0.8),
         key="COLOR_OPACITY",
         help="립스틱 색이 입술색을 덮는 정도입니다."
     )
@@ -245,6 +229,9 @@ with st.sidebar.expander("Color", expanded=True):
         key="VALUE_WEIGHT",
         help="대상 색상의 명도(Value)를 얼마나 반영할지 결정합니다. 다크 브라운 등 어두운 색상을 표현할 때 높여주세요."
     )
+
+    if st.session_state.get("DEEP_COLOR") is None:
+        st.session_state["DEEP_COLOR"] = 0.0
 
     DEEP_COLOR = st.slider(
         "Deep Color", 0.0, 1.0,

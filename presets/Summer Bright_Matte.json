@@ -1,0 +1,37 @@
+{
+  "EDGE_UPPER": 11,
+  "EDGE_LOWER": 12,
+  "MIDLINE_BIAS": 0.16,
+  "LIP_COLOR_HEX": "#da5472",
+  "COLOR_OPACITY": null,
+  "BLENDING_MODE": "softlight",
+  "BASE_DESATURATION": 0.0,
+  "VALUE_WEIGHT": 0.18,
+  "DEEP_COLOR": 0.35,
+  "LIQUID_BLUR_SIGMA": 42,
+  "HEIGHT_GAIN": 14.5,
+  "HIGH_BLUR_SIGMA": 6.9,
+  "HIGH_GAIN": 10.0,
+  "ALPHA": 0.39,
+  "TEXTURE_SMOOTHING": 0.0,
+  "SPEC_STRENGTH": 0.0,
+  "SHININESS": 10.0,
+  "CLEAR_STRENGTH": 0.0,
+  "CLEAR_EXPONENT": 30,
+  "CLEAR_LIGHT_X": 0.0,
+  "UPPER_CENTER": -0.8,
+  "UPPER_WIDTH": 0.25,
+  "LOWER_CENTER": 0.55,
+  "LOWER_WIDTH": 0.35,
+  "CUPID_BOOST": 0.0,
+  "LIGHT_DIR": [
+    0.0,
+    -0.25,
+    1.0
+  ],
+  "LIP_COLOR_RGB": [
+    218,
+    84,
+    114
+  ]
+}
