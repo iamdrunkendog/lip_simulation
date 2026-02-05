@@ -22,7 +22,7 @@ os.makedirs(TEST_IMAGE_DIR, exist_ok=True)
 
 PRESET_KEYS = [
     # Mask / Geometry
-    "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS",
+    "EDGE_UPPER", "EDGE_LOWER", "MIDLINE_BIAS", "CLEAR_EXPAND_RATIO",
 
     # Color
     "LIP_COLOR_HEX", "COLOR_OPACITY", "BLENDING_MODE", "BASE_DESATURATION", "VALUE_WEIGHT", "DEEP_COLOR",
@@ -33,10 +33,11 @@ PRESET_KEYS = [
     "TEXTURE_SMOOTHING",
 
     # Specular
-    "SPEC_STRENGTH", "SHININESS",
+    "SPEC_STRENGTH", "SHININESS", "SPEC_BLEND_MODE",
 
     # Clear Coat
     "CLEAR_STRENGTH", "CLEAR_EXPONENT", "CLEAR_LIGHT_X",
+    "CLEAR_NORMAL_INFLUENCE", "CLEAR_FEATHER",
     
     # Highlight Shape
     "UPPER_CENTER", "UPPER_WIDTH", "LOWER_CENTER", "LOWER_WIDTH", "CUPID_BOOST",
@@ -44,6 +45,17 @@ PRESET_KEYS = [
     # Light
     "LIGHT_DIR",
 ]
+
+# 누락된 키에 대한 기본값 정의
+DEFAULT_VALUES = {
+    "CLEAR_EXPAND_RATIO": 0.0,
+    "CLEAR_NORMAL_INFLUENCE": 1.0,
+    "CLEAR_FEATHER": 0.0,
+    "SPEC_BLEND_MODE": "screen",
+    "LIP_COLOR_HEX": "#D01020",
+    "COLOR_OPACITY": 0.8,
+    "BLENDING_MODE": "softlight",
+}
 
 # =====================================================
 # Helpers
@@ -74,6 +86,10 @@ def export_preset(name: str):
     preset = {}
     for k in PRESET_KEYS:
         v = st.session_state.get(k)
+        
+        # 값이 없는 경우 기본값 사용 (Safety fallback)
+        if v is None and k in DEFAULT_VALUES:
+            v = DEFAULT_VALUES[k]
 
         if isinstance(v, np.ndarray):
             preset[k] = v.tolist()
@@ -102,10 +118,13 @@ def load_preset(path: str, filter_keys: list = None):
     Load preset keys into session_state safely.
     Restore LIGHT_DIR as (3,) float32 numpy vector.
     If filter_keys is provided, only those keys are updated.
+    
+    IMPORTANT: Resets missing keys to defaults to prevent state leakage.
     """
     with open(path, "r", encoding="utf-8") as f:
         preset = json.load(f)
 
+    # 1. 파일에 있는 값 로드
     for k, v in preset.items():
         if filter_keys is not None and k not in filter_keys:
             continue
@@ -115,6 +134,13 @@ def load_preset(path: str, filter_keys: list = None):
         else:
             if v is not None:
                 st.session_state[k] = v
+                
+    # 2. 파일에 없는 값은 기본값으로 리셋 (상태 누수 방지)
+    # 단, filter_keys가 없을 때(전체 로드)만 수행
+    if filter_keys is None:
+        for k in PRESET_KEYS:
+            if k not in preset and k in DEFAULT_VALUES:
+                st.session_state[k] = DEFAULT_VALUES[k]
 
 
 # =====================================================
