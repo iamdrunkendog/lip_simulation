@@ -128,20 +128,29 @@ if st.sidebar.button("Save Preset"):
     export_preset(preset_name)
     st.sidebar.success(f"Saved preset: {preset_name}")
 
+if st.sidebar.button("Refresh List"):
+    st.rerun()
+
 preset_files = [
     f.replace(".json", "")
     for f in os.listdir(PRESET_DIR)
     if f.endswith(".json")
 ]
+preset_files.sort(key=str.lower)  # 대소문자 구분 없이 가나다순 정렬
 
 selected_preset = st.sidebar.selectbox(
     "Load preset",
     options=[""] + preset_files
 )
 
-if selected_preset:
+if "last_preset" not in st.session_state:
+    st.session_state.last_preset = ""
+
+if selected_preset and selected_preset != st.session_state.last_preset:
     load_preset(os.path.join(PRESET_DIR, f"{selected_preset}.json"))
+    st.session_state.last_preset = selected_preset
     st.sidebar.success(f"Loaded preset: {selected_preset}")
+    st.rerun()  # 상태 업데이트 후 UI 강제 갱신
 
 st.sidebar.divider()
 
@@ -266,6 +275,13 @@ with st.sidebar.expander("Mask / Geometry", expanded=False):
         help="윗입술과 아랫입술의 경계선 위치를 위/아래로 미세 조정합니다."
     )
 
+    CLEAR_EXPAND_RATIO = st.slider(
+        "CLEAR_EXPAND_RATIO", 0.0, 5.0,
+        st.session_state.get("CLEAR_EXPAND_RATIO", 0.0), 0.1,
+        key="CLEAR_EXPAND_RATIO",
+        help="Clear Coat 적용 영역을 입술 크기에 비례하여 확장합니다 (%). 0%는 원본 영역, 5%는 입술 크기의 5%만큼 확장됩니다."
+    )
+
 
 # ------------------
 # Fake Normal
@@ -350,7 +366,7 @@ with st.sidebar.expander("Specular", expanded=True):
 # ------------------
 with st.sidebar.expander("Clear Coat", expanded=True):
     CLEAR_STRENGTH = st.slider(
-        "CLEAR_STRENGTH", 0.0, 2.0,
+        "CLEAR_STRENGTH", 0.0, 3.0,
         st.session_state.get("CLEAR_STRENGTH", 0.4), 0.01, key="CLEAR_STRENGTH"
     )
     CLEAR_EXPONENT = st.slider(
@@ -370,6 +386,13 @@ with st.sidebar.expander("Clear Coat", expanded=True):
         st.session_state.get("CLEAR_NORMAL_INFLUENCE", 1.0), 0.01,
         key="CLEAR_NORMAL_INFLUENCE",
         help="1.0: 입체감(정면광) 100% 반영. 0.0: 입체감 무시하고 마스크 영역 전체에 광택 균일하게 적용."
+    )
+
+    CLEAR_FEATHER = st.slider(
+        "CLEAR_FEATHER", 0.0, 10.0,
+        st.session_state.get("CLEAR_FEATHER", 0.0), 0.1,
+        key="CLEAR_FEATHER",
+        help="Clear Coat 영역의 가장자리만 부드럽게 처리(Feathering)합니다. 광택의 선명도는 유지됩니다."
     )
 
 # ------------------
@@ -411,6 +434,7 @@ params = {
     "EDGE_UPPER": EDGE_UPPER,
     "EDGE_LOWER": EDGE_LOWER,
     "MIDLINE_BIAS": MIDLINE_BIAS,
+    "CLEAR_EXPAND_RATIO": CLEAR_EXPAND_RATIO,
 
     "LIQUID_BLUR_SIGMA": LIQUID_BLUR_SIGMA,
     "HEIGHT_GAIN": HEIGHT_GAIN,
@@ -420,7 +444,7 @@ params = {
     "ALPHA": ALPHA,
 
     "SPEC_STRENGTH": SPEC_STRENGTH,
-    "SHININESS": SHININESS,
+    "SHININESS": 30.0 if (selected_preset and selected_preset.lower().endswith("glossy")) else SHININESS,
     "SPEC_BLEND_MODE": SPEC_BLEND_MODE.lower(),
 
     # IMPORTANT: Always coerce to (3,) float32
@@ -432,6 +456,7 @@ params = {
     "CLEAR_EXPONENT": CLEAR_EXPONENT,
     "CLEAR_LIGHT_X": CLEAR_LIGHT_X,
     "CLEAR_NORMAL_INFLUENCE": CLEAR_NORMAL_INFLUENCE,
+    "CLEAR_FEATHER": CLEAR_FEATHER,
 
     "UPPER_CENTER": UPPER_CENTER,
     "UPPER_WIDTH": UPPER_WIDTH,
